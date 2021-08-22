@@ -29,19 +29,27 @@ fn main() -> Result<(), Report> {
     );
 
     for milestone in &campaign.milestones {
+        // Indent
         print!("    ");
 
         if milestone.amount < campaign.total_amount_raised {
-            print!("  ✅ ");
+            // Print an indicator if we've made it
+            print!("✅ ");
+            // don't print % after we pass it
+            print!("     ");
         } else {
+            // ... or an indicator if we have not
+            print!("🤞 ");
+            // print percent for not-yet-completed milestones
             print!(
                 "{}",
                 percent(campaign.total_amount_raised, milestone.amount)
             );
         }
+        // Padding after the above
         print!(" ");
 
-        println!("{:>10}: {}", dollars(milestone.amount), milestone.name);
+        println!("{:>13} - {}", dollars(milestone.amount), milestone.name);
     }
 
     Ok(())
