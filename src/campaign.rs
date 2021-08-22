@@ -98,17 +98,9 @@ pub fn fetch_campaign_json() -> Result<String, Report> {
         },
         "query": indoc::indoc!(r#"query get_campaign_by_vanity_and_slug($vanity: String, $slug: String) {
             campaign(vanity: $vanity, slug: $slug) {
-                id
                 name
                 slug
                 status
-                originalGoal {
-                    value
-                    currency
-                }
-                team {
-                    name
-                }
                 description
                 totalAmountRaised {
                     currency
@@ -118,18 +110,11 @@ pub fn fetch_campaign_json() -> Result<String, Report> {
                     currency
                     value
                 }
-                avatar {
-                    alt
-                    height
-                    width
-                    src
-                }
                 milestones {
-                    id
                     name
                     amount {
-                        value
                         currency
+                        value
                     }
                 }
             }
