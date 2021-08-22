@@ -1,5 +1,5 @@
 use color_eyre::Report;
-use serde::Deserialize;
+use serde::{de, Deserialize, Deserializer};
 use serde_json::json;
 
 #[allow(unused_imports)]
@@ -7,19 +7,75 @@ use tracing::{info, warn};
 
 use std::fmt;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+struct Milestone {
+    name: String,
+    amount: CurrencyAmount,
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+struct Campaign {
+    name: String,
+    description: String,
+    slug: String,
+    status: String,
+
+    goal: CurrencyAmount,
+    #[serde(rename = "totalAmountRaised")]
+    total_amount_raised: CurrencyAmount,
+
+    #[serde(default)]
+    milestones: Vec<Milestone>,
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+struct CurrencyAmount {
+    /// Currency our amount is in. Often just USD
+    currency: String,
+
+    /// Amount that this represents
+    #[serde(deserialize_with = "deserialize_f64_from_str")]
+    value: f64,
+}
+
+impl CurrencyAmount {
+    #[allow(dead_code)]
+    fn usd(value: f64) -> Self {
+        Self {
+            currency: "USD".to_string(),
+            value,
+        }
+    }
+}
+
+impl From<CurrencyAmount> for f64 {
+    fn from(amount: CurrencyAmount) -> f64 {
+        // :shrug:
+        assert_eq!(amount.currency, "USD");
+        amount.value
+    }
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+struct Data {
+    campaign: Campaign,
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq)]
 struct ApiResponse {
+    data: Option<Data>,
+
     #[serde(default)]
     errors: Vec<ApiError>,
 }
 
-#[derive(Deserialize, Clone, Copy, Debug)]
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq)]
 struct ApiLocation {
     line: usize,
     column: usize,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, PartialEq)]
 struct ApiError {
     message: String,
     #[serde(default)]
@@ -35,6 +91,14 @@ impl fmt::Display for ApiError {
             write!(f, "~:{}:{} {}", loc.line, loc.column, self.message)
         }
     }
+}
+
+fn deserialize_f64_from_str<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    s.parse().map_err(de::Error::custom)
 }
 
 #[tracing::instrument]
@@ -86,16 +150,13 @@ fn query_campaign_status() -> Result<ApiResponse, Report> {
             }
         }"#)
     });
-    // let request = serde_json::to_string(&graph_ql_query)?;
+
     let request = serde_json::to_string_pretty(&graph_ql_query)?;
     std::fs::write("./target/request.json", &request)?;
 
-    let res = reqwest::blocking::Client::new()
-        .post(API_URL)
-        .body(request.clone())
-        .send()?;
+    let response = ureq::post(API_URL).send_json(graph_ql_query)?;
 
-    let res_json = res.text()?;
+    let res_json = response.into_string()?;
     std::fs::write("./target/response.json", &res_json)?;
 
     let res: ApiResponse = serde_json::from_str(&res_json)?;
@@ -105,31 +166,6 @@ fn query_campaign_status() -> Result<ApiResponse, Report> {
         // Iunno if we'll ever get multiple errors, so don't worry about combining them yet
         if res.errors.len() > 1 {
             warn!(?res, "Expected 0 or 1 failures but got 2?",);
-        }
-
-        // Print the section it's talking about
-        {
-            let ApiLocation { line, column } = res.errors[0].locations[0];
-            let mut lines: Vec<_> = request.lines().collect();
-            // Lines are 1-indexed, so insert a dummy line at the start. This way we don't have to translate accesses.
-            lines.insert(0, "<internal filler line>");
-
-            let arm: String = std::iter::repeat('~').take(column as usize - 1).collect();
-
-            // One before, but not our filler line
-            #[allow(clippy::int_plus_one)]
-            if line - 1 >= 1 {
-                println!("{:>3}: {}", line - 1, lines[line - 1]);
-            }
-
-            // Main line
-            println!("{:>3}: {}", line, &lines[line]);
-            println!("{:>3}  {}^", "", arm);
-
-            // One after
-            if line + 1 < lines.len() {
-                println!("{:>3}: {}", line + 1, lines[line + 1]);
-            }
         }
 
         // And then return
@@ -169,10 +205,47 @@ fn setup() -> Result<(), Report> {
 mod t {
     use super::*;
 
+    /// Verify that our saved JSON from the API matches our serde model
     #[test]
     fn example_response() {
+        const DESCRIPTION: &str = "Every September, the Relay FM community of podcasters and listeners rallies together to support the lifesaving mission of St. Jude Children’s Research Hospital during Childhood Cancer Awareness Month. Throughout the month, Relay FM will introduce ways to support St. Jude through entertaining donation challenges and other mini-fundraising events that will culminate in the second annual Relay for St. Jude Podcastathon on September 17th beginning at 12pm Eastern at twitch.tv/relayfm.";
         const RESPONSE: &str = include_str!("example-response.json");
 
-        let _response: ApiResponse = serde_json::from_str(RESPONSE).unwrap();
+        let expected = ApiResponse {
+            data: Some(Data {
+                campaign: Campaign {
+                    name: "Relay FM for St. Jude 2021".to_string(),
+                    description: DESCRIPTION.to_string(),
+                    slug: "relay-st-jude-21".to_string(),
+                    status: "published".to_string(),
+
+                    goal: CurrencyAmount::usd(333_333.33),
+                    total_amount_raised: CurrencyAmount::usd(22663.40),
+
+                    milestones: vec![
+                        Milestone {
+                            amount: CurrencyAmount::usd(75000.00),
+                            name: "Stephen & Myke go to space via KSP".to_string(),
+                        },
+                        Milestone {
+                            amount: CurrencyAmount::usd(55000.00),
+                            name: "Stephen dissembles his NeXTCube on stream".to_string(),
+                        },
+                        Milestone {
+                            amount: CurrencyAmount::usd(20000.00),
+                            name: "Myke and Stephen attempt Flight Simulator again".to_string(),
+                        },
+                        Milestone {
+                            amount: CurrencyAmount::usd(196060.44),
+                            name: "$1 million raised in 3 years!".to_string(),
+                        },
+                    ],
+                },
+            }),
+
+            errors: vec![],
+        };
+
+        assert_eq!(expected, serde_json::from_str(RESPONSE).unwrap());
     }
 }
