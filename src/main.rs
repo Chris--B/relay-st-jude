@@ -2,9 +2,6 @@ use color_eyre::Report;
 use serde::{de, Deserialize, Deserializer};
 use serde_json::json;
 
-#[allow(unused_imports)]
-use tracing::{info, warn};
-
 use std::fmt;
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]

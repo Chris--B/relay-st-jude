@@ -12,7 +12,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 indoc = "1"
 
-# Error handling and logging
+# Easy error handling
 color-eyre = "0.5"
-tracing = "0.1"
-tracing-subscriber = "0.2"
