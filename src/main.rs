@@ -9,6 +9,7 @@ use std::fmt;
 
 #[derive(Deserialize, Clone, Debug)]
 struct ApiResponse {
+    #[serde(default)]
     errors: Vec<ApiError>,
 }
 
@@ -21,15 +22,17 @@ struct ApiLocation {
 #[derive(Deserialize, Clone, Debug)]
 struct ApiError {
     message: String,
-    locations: Option<Vec<ApiLocation>>,
+    #[serde(default)]
+    locations: Vec<ApiLocation>,
 }
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(locs) = &self.locations {
-            write!(f, "~:{}:{} {}", locs[0].line, locs[0].column, self.message)
-        } else {
+        if self.locations.is_empty() {
             write!(f, "~ {}", self.message)
+        } else {
+            let loc = self.locations[0];
+            write!(f, "~:{}:{} {}", loc.line, loc.column, self.message)
         }
     }
 }
@@ -106,7 +109,7 @@ fn query_campaign_status() -> Result<ApiResponse, Report> {
 
         // Print the section it's talking about
         {
-            let ApiLocation { line, column } = res.errors[0].locations.as_ref().unwrap()[0];
+            let ApiLocation { line, column } = res.errors[0].locations[0];
             let mut lines: Vec<_> = request.lines().collect();
             // Lines are 1-indexed, so insert a dummy line at the start. This way we don't have to translate accesses.
             lines.insert(0, "<internal filler line>");
