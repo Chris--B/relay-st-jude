@@ -40,7 +40,7 @@ struct CurrencyAmount {
 
 impl CurrencyAmount {
     #[allow(dead_code)]
-    fn usd(value: f64) -> Self {
+    fn from_usd(value: f64) -> Self {
         Self {
             currency: "USD".to_string(),
             value,
@@ -101,8 +101,7 @@ where
     s.parse().map_err(de::Error::custom)
 }
 
-#[tracing::instrument]
-fn query_campaign_status() -> Result<ApiResponse, Report> {
+fn query_campaign() -> Result<Campaign, Report> {
     const API_URL: &str = "https://api.tiltify.com";
 
     let graph_ql_query = json!({
@@ -160,14 +159,9 @@ fn query_campaign_status() -> Result<ApiResponse, Report> {
     std::fs::write("./target/response.json", &res_json)?;
 
     let res: ApiResponse = serde_json::from_str(&res_json)?;
-    if res.errors.is_empty() {
-        Ok(res)
+    if let Some(data) = res.data {
+        Ok(data.campaign)
     } else {
-        // Iunno if we'll ever get multiple errors, so don't worry about combining them yet
-        if res.errors.len() > 1 {
-            warn!(?res, "Expected 0 or 1 failures but got 2?",);
-        }
-
         // And then return
         Err(Report::msg(res.errors[0].clone()))
     }
@@ -176,27 +170,44 @@ fn query_campaign_status() -> Result<ApiResponse, Report> {
 fn main() -> Result<(), Report> {
     setup()?;
 
-    let status = query_campaign_status()?;
-    println!("status: {:#?}", status);
+    let mut campaign = query_campaign()?;
+
+    // Sort them by $$
+    campaign
+        .milestones
+        .sort_by_key(|milestone| (milestone.amount.value * 100.) as u64);
+
+    println!("{}!", campaign.name);
+    println!(
+        "$ {:.2} / {:.2}",
+        campaign.total_amount_raised.value, campaign.goal.value
+    );
+
+    for milestone in &campaign.milestones {
+        print!("    ");
+
+        if milestone.amount.value < campaign.total_amount_raised.value {
+            print!("  ✅ ");
+        } else {
+            print!(
+                "{:2.1}%",
+                100.0 * campaign.total_amount_raised.value / milestone.amount.value
+            );
+        }
+        print!(" ");
+
+        let dollars = format!("${:.2}", milestone.amount.value);
+        println!("{:>10}: {}", dollars, milestone.name);
+    }
 
     Ok(())
 }
 
 fn setup() -> Result<(), Report> {
-    use std::env;
-    use tracing_subscriber::EnvFilter;
-
-    if env::var("RUST_LIB_BACKTRACE").is_err() {
-        env::set_var("RUST_LIB_BACKTRACE", "1")
+    if std::env::var("RUST_LIB_BACKTRACE").is_err() {
+        std::env::set_var("RUST_LIB_BACKTRACE", "1")
     }
     color_eyre::install()?;
-
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info")
-    }
-    tracing_subscriber::fmt::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
 
     Ok(())
 }
@@ -219,24 +230,24 @@ mod t {
                     slug: "relay-st-jude-21".to_string(),
                     status: "published".to_string(),
 
-                    goal: CurrencyAmount::usd(333_333.33),
-                    total_amount_raised: CurrencyAmount::usd(22663.40),
+                    goal: CurrencyAmount::from_usd(333_333.33),
+                    total_amount_raised: CurrencyAmount::from_usd(22_663.40),
 
                     milestones: vec![
                         Milestone {
-                            amount: CurrencyAmount::usd(75000.00),
+                            amount: CurrencyAmount::from_usd(75_000.00),
                             name: "Stephen & Myke go to space via KSP".to_string(),
                         },
                         Milestone {
-                            amount: CurrencyAmount::usd(55000.00),
+                            amount: CurrencyAmount::from_usd(55_000.00),
                             name: "Stephen dissembles his NeXTCube on stream".to_string(),
                         },
                         Milestone {
-                            amount: CurrencyAmount::usd(20000.00),
+                            amount: CurrencyAmount::from_usd(20_000.00),
                             name: "Myke and Stephen attempt Flight Simulator again".to_string(),
                         },
                         Milestone {
-                            amount: CurrencyAmount::usd(196060.44),
+                            amount: CurrencyAmount::from_usd(196_060.44),
                             name: "$1 million raised in 3 years!".to_string(),
                         },
                     ],
