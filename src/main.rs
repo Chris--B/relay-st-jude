@@ -11,28 +11,29 @@ fn main() -> Result<(), Report> {
     // Sort them by $$
     campaign
         .milestones
-        .sort_by_key(|milestone| (milestone.amount.value * 100.) as u64);
+        .sort_by_key(|milestone| (milestone.amount.usd() * 100.) as u64);
 
     println!("{}!", campaign.name);
     println!(
         "$ {:.2} / {:.2}",
-        campaign.total_amount_raised.value, campaign.goal.value
+        campaign.total_amount_raised.usd(),
+        campaign.goal.usd()
     );
 
     for milestone in &campaign.milestones {
         print!("    ");
 
-        if milestone.amount.value < campaign.total_amount_raised.value {
+        if milestone.amount.usd() < campaign.total_amount_raised.usd() {
             print!("  ✅ ");
         } else {
             print!(
                 "{:2.1}%",
-                100.0 * campaign.total_amount_raised.value / milestone.amount.value
+                100.0 * campaign.total_amount_raised.usd() / milestone.amount.usd()
             );
         }
         print!(" ");
 
-        let dollars = format!("${:.2}", milestone.amount.value);
+        let dollars = format!("${:.2}", milestone.amount.usd());
         println!("{:>10}: {}", dollars, milestone.name);
     }
 
