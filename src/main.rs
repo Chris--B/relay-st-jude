@@ -164,3 +164,15 @@ fn setup() -> Result<(), Report> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod t {
+    use super::*;
+
+    #[test]
+    fn example_response() {
+        const RESPONSE: &str = include_str!("example-response.json");
+
+        let _response: ApiResponse = serde_json::from_str(RESPONSE).unwrap();
+    }
+}

@@ -1,0 +1,64 @@
+{
+  "data": {
+    "campaign": {
+      "avatar": {
+        "alt": "alt",
+        "height": 64,
+        "src": "https://assets.tiltify.com/uploads/event/thumbnail/121745/blob-4eeff29f-7090-4aba-bb8c-098bb7887576.png",
+        "width": 64
+      },
+      "description": "Every September, the Relay FM community of podcasters and listeners rallies together to support the lifesaving mission of St. Jude Children’s Research Hospital during Childhood Cancer Awareness Month. Throughout the month, Relay FM will introduce ways to support St. Jude through entertaining donation challenges and other mini-fundraising events that will culminate in the second annual Relay for St. Jude Podcastathon on September 17th beginning at 12pm Eastern at twitch.tv/relayfm.",
+      "goal": {
+        "currency": "USD",
+        "value": "333333.33"
+      },
+      "id": 121745,
+      "milestones": [
+        {
+          "amount": {
+            "currency": "USD",
+            "value": "75000.00"
+          },
+          "id": 128970,
+          "name": "Stephen & Myke go to space via KSP"
+        },
+        {
+          "amount": {
+            "currency": "USD",
+            "value": "55000.00"
+          },
+          "id": 127774,
+          "name": "Stephen dissembles his NeXTCube on stream"
+        },
+        {
+          "amount": {
+            "currency": "USD",
+            "value": "20000.00"
+          },
+          "id": 127775,
+          "name": "Myke and Stephen attempt Flight Simulator again"
+        },
+        {
+          "amount": {
+            "currency": "USD",
+            "value": "196060.44"
+          },
+          "id": 126992,
+          "name": "$1 million raised in 3 years!"
+        }
+      ],
+      "name": "Relay FM for St. Jude 2021",
+      "originalGoal": {
+        "currency": "USD",
+        "value": "100"
+      },
+      "slug": "relay-st-jude-21",
+      "status": "published",
+      "team": null,
+      "totalAmountRaised": {
+        "currency": "USD",
+        "value": "22663.40"
+      }
+    }
+  }
+}
