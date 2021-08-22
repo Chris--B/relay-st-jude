@@ -7,10 +7,6 @@ fn percent(a: campaign::Currency, b: campaign::Currency) -> String {
     format!("{:2.1}%", 100.0 * a.usd() / b.usd())
 }
 
-fn dollars(a: campaign::Currency) -> String {
-    format!("${:.2}", a.usd())
-}
-
 fn main() -> Result<(), Report> {
     setup()?;
 
@@ -22,11 +18,7 @@ fn main() -> Result<(), Report> {
         .sort_by_key(|milestone| (milestone.amount.usd() * 100.) as u64);
 
     println!("{}!", campaign.name);
-    println!(
-        "{} of {}",
-        dollars(campaign.total_amount_raised),
-        dollars(campaign.goal)
-    );
+    println!("{} of {}", campaign.total_amount_raised, campaign.goal);
 
     for milestone in &campaign.milestones {
         // Indent
@@ -49,7 +41,7 @@ fn main() -> Result<(), Report> {
         // Padding after the above
         print!(" ");
 
-        println!("{:>13} - {}", dollars(milestone.amount), milestone.name);
+        println!("{:15} - {}", milestone.amount, milestone.name);
     }
 
     Ok(())

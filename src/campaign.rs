@@ -1,4 +1,5 @@
 use color_eyre::Report;
+use num_format::{Locale, ToFormattedString};
 use serde::{de, Deserialize, Deserializer};
 use serde_json::json;
 
@@ -50,6 +51,25 @@ where
     s.parse().map_err(de::Error::custom)
 }
 
+impl fmt::Display for Currency {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // I can't figure out how to format with commas and a fixed amount of decimals...
+        // So we'll format two ints instead
+        let dollars: u64 = self.amount as u64;
+        let cents: u8 = (100. * self.amount.fract() + 0.005) as u8;
+
+        // This is our main dollar amount as a string, hurray!
+        // We'll use this string and apply width to it directly.
+        let s = format!("${}.{:02}", dollars.to_formatted_string(&Locale::en), cents);
+
+        if let Some(width) = f.width() {
+            write!(f, "{:>width$}", s, width = width,)
+        } else {
+            // No width requested? Write it direct
+            write!(f, "{}", s)
+        }
+    }
+}
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 struct ApiData {
     campaign: Campaign,
