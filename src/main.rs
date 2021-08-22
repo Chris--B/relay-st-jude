@@ -3,38 +3,45 @@ use color_eyre::Report;
 mod campaign;
 use campaign::{fetch_campaign, Campaign};
 
+fn percent(a: campaign::Currency, b: campaign::Currency) -> String {
+    format!("{:2.1}%", 100.0 * a.usd() / b.usd())
+}
+
+fn dollars(a: campaign::Currency) -> String {
+    format!("${:.2}", a.usd())
+}
+
 fn main() -> Result<(), Report> {
     setup()?;
 
     let mut campaign: Campaign = fetch_campaign()?;
 
-    // Sort them by $$
+    // Sort milestones by $$
     campaign
         .milestones
         .sort_by_key(|milestone| (milestone.amount.usd() * 100.) as u64);
 
     println!("{}!", campaign.name);
     println!(
-        "$ {:.2} / {:.2}",
-        campaign.total_amount_raised.usd(),
-        campaign.goal.usd()
+        "{} of {}",
+        dollars(campaign.total_amount_raised),
+        dollars(campaign.goal)
     );
 
     for milestone in &campaign.milestones {
         print!("    ");
 
-        if milestone.amount.usd() < campaign.total_amount_raised.usd() {
+        if milestone.amount < campaign.total_amount_raised {
             print!("  ✅ ");
         } else {
             print!(
-                "{:2.1}%",
-                100.0 * campaign.total_amount_raised.usd() / milestone.amount.usd()
+                "{}",
+                percent(campaign.total_amount_raised, milestone.amount)
             );
         }
         print!(" ");
 
-        let dollars = format!("${:.2}", milestone.amount.usd());
-        println!("{:>10}: {}", dollars, milestone.name);
+        println!("{:>10}: {}", dollars(milestone.amount), milestone.name);
     }
 
     Ok(())

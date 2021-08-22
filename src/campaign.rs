@@ -25,7 +25,7 @@ pub struct Campaign {
     pub milestones: Vec<Milestone>,
 }
 
-#[derive(Deserialize, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct Currency {
     /// Amount that this represents
     #[serde(deserialize_with = "deserialize_f64_from_str", rename = "value")]
@@ -87,14 +87,14 @@ impl fmt::Display for ApiError {
     }
 }
 
-pub fn fetch_campaign_json() -> Result<String, Report> {
+pub fn fetch_campaign_json(vanity: &str, slug: &str) -> Result<String, Report> {
     const API_URL: &str = "https://api.tiltify.com";
 
     let graph_ql_query = json!({
         "operationName": "get_campaign_by_vanity_and_slug",
         "variables": {
-            "vanity": "@relay-fm",
-            "slug": "relay-st-jude-21"
+            "vanity": vanity,
+            "slug": slug,
         },
         "query": indoc::indoc!(r#"query get_campaign_by_vanity_and_slug($vanity: String, $slug: String) {
             campaign(vanity: $vanity, slug: $slug) {
@@ -129,7 +129,8 @@ pub fn fetch_campaign_json() -> Result<String, Report> {
 }
 
 pub fn fetch_campaign() -> Result<Campaign, Report> {
-    let json = fetch_campaign_json()?;
+    // TODO: Don't hard code these, maybe take them from Clap or something.
+    let json = fetch_campaign_json("@relay-fm", "relay-st-jude-21")?;
 
     let res: ApiResponse = serde_json::from_str(&json)?;
     if let Some(data) = res.data {
