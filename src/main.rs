@@ -1,16 +1,15 @@
 use color_eyre::Report;
 
-mod campaign;
-use campaign::{fetch_campaign, Campaign};
+use relay_st_jude::{Campaign, Currency};
 
-fn percent(a: campaign::Currency, b: campaign::Currency) -> String {
+fn percent(a: Currency, b: Currency) -> String {
     format!("{:2.1}%", 100.0 * a.usd() / b.usd())
 }
 
 fn main() -> Result<(), Report> {
     setup()?;
 
-    let mut campaign: Campaign = fetch_campaign()?;
+    let mut campaign: Campaign = Campaign::fetch()?;
 
     // Sort milestones by $$
     campaign
@@ -41,7 +40,7 @@ fn main() -> Result<(), Report> {
         // Padding after the above
         print!(" ");
 
-        println!("{:15} - {}", milestone.amount, milestone.name);
+        println!("{:15} - {}", milestone.amount, milestone.description);
     }
 
     Ok(())

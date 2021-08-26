@@ -7,23 +7,9 @@ use std::fmt;
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct Milestone {
-    pub name: String,
-    pub amount: Currency,
-}
-
-#[derive(Deserialize, Clone, Debug, PartialEq)]
-pub struct Campaign {
-    pub name: String,
+    #[serde(rename = "name")]
     pub description: String,
-    pub slug: String,
-    pub status: String,
-
-    pub goal: Currency,
-    #[serde(rename = "totalAmountRaised")]
-    pub total_amount_raised: Currency,
-
-    #[serde(default)]
-    pub milestones: Vec<Milestone>,
+    pub amount: Currency,
 }
 
 #[derive(Deserialize, Copy, Clone, Debug, PartialEq, PartialOrd)]
@@ -70,6 +56,7 @@ impl fmt::Display for Currency {
         }
     }
 }
+
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 struct ApiData {
     campaign: Campaign,
@@ -140,29 +127,51 @@ fn build_graph_ql_query(vanity: &str, slug: &str) -> serde_json::Value {
     })
 }
 
-pub fn fetch_campaign_json(vanity: &str, slug: &str) -> Result<String, Report> {
-    const API_URL: &str = "https://api.tiltify.com";
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub struct Campaign {
+    pub name: String,
 
-    let json = ureq::post(API_URL)
-        .send_json(build_graph_ql_query(vanity, slug))?
-        .into_string()?;
+    pub description: String,
+    pub slug: String,
+    pub status: String,
 
-    Ok(json)
+    pub goal: Currency,
+    #[serde(rename = "totalAmountRaised")]
+    pub total_amount_raised: Currency,
+
+    #[serde(default)]
+    pub milestones: Vec<Milestone>,
 }
 
-pub fn fetch_campaign() -> Result<Campaign, Report> {
-    // TODO: Don't hard code these, maybe take them from Clap or something.
-    let json = fetch_campaign_json("@relay-fm", "relay-st-jude-21")?;
+impl Campaign {
+    pub fn fetch() -> Result<Self, Report> {
+        Self::fetch_by("@relay-fm", "relay-st-jude-21")
+    }
 
-    let res: ApiResponse = serde_json::from_str(&json)?;
-    if let Some(data) = res.data {
-        Ok(data.campaign)
-    } else {
-        let errors: Vec<String> = res.errors.iter().map(|e| format!("{}", e)).collect();
-        let errors = errors.join("\n");
+    pub fn fetch_by(vanity: &str, slug: &str) -> Result<Self, Report> {
+        // TODO: Don't hard code these, maybe take them from Clap or something.
+        let json = Self::fetch_json(vanity, slug)?;
 
-        let report = Report::msg(format!("Campaign Query failed:\n{}", errors));
-        Err(report)
+        let res: ApiResponse = serde_json::from_str(&json)?;
+        if let Some(data) = res.data {
+            Ok(data.campaign)
+        } else {
+            let errors: Vec<String> = res.errors.iter().map(|e| format!("{}", e)).collect();
+            let errors = errors.join("\n");
+
+            let report = Report::msg(format!("Campaign Query failed:\n{}", errors));
+            Err(report)
+        }
+    }
+
+    pub fn fetch_json(vanity: &str, slug: &str) -> Result<String, Report> {
+        const API_URL: &str = "https://api.tiltify.com";
+
+        let json = ureq::post(API_URL)
+            .send_json(build_graph_ql_query(vanity, slug))?
+            .into_string()?;
+
+        Ok(json)
     }
 }
 
@@ -190,19 +199,20 @@ mod t {
                     milestones: vec![
                         Milestone {
                             amount: Currency::from_usd(75_000.00),
-                            name: "Stephen & Myke go to space via KSP".to_string(),
+                            description: "Stephen & Myke go to space via KSP".to_string(),
                         },
                         Milestone {
                             amount: Currency::from_usd(55_000.00),
-                            name: "Stephen dissembles his NeXTCube on stream".to_string(),
+                            description: "Stephen dissembles his NeXTCube on stream".to_string(),
                         },
                         Milestone {
                             amount: Currency::from_usd(20_000.00),
-                            name: "Myke and Stephen attempt Flight Simulator again".to_string(),
+                            description: "Myke and Stephen attempt Flight Simulator again"
+                                .to_string(),
                         },
                         Milestone {
                             amount: Currency::from_usd(196_060.44),
-                            name: "$1 million raised in 3 years!".to_string(),
+                            description: "$1 million raised in 3 years!".to_string(),
                         },
                     ],
                 },
@@ -217,6 +227,6 @@ mod t {
     /// Verify that the live API JSON from the API matches our serde model
     #[test]
     fn live_response() {
-        assert!(fetch_campaign().is_ok());
+        let _campaign = Campaign::fetch().unwrap();
     }
 }
