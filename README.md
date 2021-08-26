@@ -27,10 +27,14 @@ Install it into your path with cargo
 $ cargo install --path .
 ```
 
-// TODO: add image of output
+<img width="650" alt="image" src="https://user-images.githubusercontent.com/1052157/130894036-9b956dc5-a8d5-4345-8325-d055114e13ff.png">
+
 
 ### The library
 
 Add this crate as a dependency by adding this to your `Cargo.toml`
 
-// TODO: Add GitHub URL
+```toml
+[dependencies]
+relay-st-jude = { git = "https://github.com/Chris--B/relay-st-jude.git" }
+```
