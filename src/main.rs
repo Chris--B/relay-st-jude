@@ -1,8 +1,8 @@
 use color_eyre::Report;
 
-use relay_st_jude::{Campaign, Currency};
+use relay_st_jude::{Campaign, Usd};
 
-fn percent(a: Currency, b: Currency) -> String {
+fn percent(a: Usd, b: Usd) -> String {
     format!("{:2.1}%", 100.0 * a.usd() / b.usd())
 }
 
