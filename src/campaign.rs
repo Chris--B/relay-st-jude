@@ -107,10 +107,8 @@ impl fmt::Display for ApiError {
     }
 }
 
-pub fn fetch_campaign_json(vanity: &str, slug: &str) -> Result<String, Report> {
-    const API_URL: &str = "https://api.tiltify.com";
-
-    let graph_ql_query = json!({
+fn build_graph_ql_query(vanity: &str, slug: &str) -> serde_json::Value {
+    json!({
         "operationName": "get_campaign_by_vanity_and_slug",
         "variables": {
             "vanity": vanity,
@@ -139,10 +137,14 @@ pub fn fetch_campaign_json(vanity: &str, slug: &str) -> Result<String, Report> {
                 }
             }
         }"#)
-    });
+    })
+}
+
+pub fn fetch_campaign_json(vanity: &str, slug: &str) -> Result<String, Report> {
+    const API_URL: &str = "https://api.tiltify.com";
 
     let json = ureq::post(API_URL)
-        .send_json(graph_ql_query)?
+        .send_json(build_graph_ql_query(vanity, slug))?
         .into_string()?;
 
     Ok(json)
@@ -210,5 +212,11 @@ mod t {
         };
 
         assert_eq!(expected, serde_json::from_str(RESPONSE).unwrap());
+    }
+
+    /// Verify that the live API JSON from the API matches our serde model
+    #[test]
+    fn live_response() {
+        assert!(fetch_campaign().is_ok());
     }
 }
